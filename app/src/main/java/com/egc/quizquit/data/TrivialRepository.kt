@@ -1,6 +1,10 @@
 package com.egc.quizquit.data
 
 import android.util.Log
+import com.egc.quizquit.domain.ITrivialRepository
+import com.egc.quizquit.domain.TrivialError
+import com.egc.quizquit.domain.TrivialResult
+import com.egc.quizquit.models.Trivial
 import com.egc.quizquit.network.APITrivial
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
@@ -8,21 +12,40 @@ import javax.inject.Inject
 class TrivialRepository @Inject constructor(
     private val apiTrivial: APITrivial,
     private val tokenManager: TokenManager
-) {
-    suspend fun getQuestions(amount: Int) = withValidToken {
-        runCatching {
-            val token = tokenManager.getToken().firstOrNull()
-            if (token == null) {
-                getToken()
-            } else {
+): ITrivialRepository {
+    override suspend fun getQuestions(amount: Int): TrivialResult<List<Trivial.Result>> =
+        withValidToken { token ->
+            runCatching {
                 val questions = apiTrivial.getQuestions(amount)
                 validateResponseCode(questions.responseCode, token)
-                    .handle(onOk = { /*TODO implement*/})
+                when (val validation = validateResponseCode(questions.responseCode, token)) {
+                    ValidationResult.Ok -> {
+                        TrivialResult.Success(questions.results)
+                    }
+
+                    is ValidationResult.Recoverable -> {
+                        TrivialResult.Error(
+                            TrivialError.Api(
+                                code = questions.responseCode,
+                                message = validation.message
+                            )
+                        )
+                    }
+
+                    is ValidationResult.Error -> {
+                        TrivialResult.Error(
+                            TrivialError.Api(
+                                code = questions.responseCode,
+                                message = validation.message
+                            )
+                        )
+                    }
+                }
+            }.getOrElse { throwable ->
+                Log.e("TrivialRepository", "Error getting questions", throwable)
+                TrivialResult.Error(throwable.toTrivialError())
             }
-        }.onFailure { exception ->
-            Log.e("TrivialRepository", "Error getting questions", exception)
         }
-    }
 
     private suspend fun getToken() {
         runCatching {
