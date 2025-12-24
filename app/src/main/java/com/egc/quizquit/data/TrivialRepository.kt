@@ -1,10 +1,11 @@
 package com.egc.quizquit.data
 
 import android.util.Log
+import com.egc.quizquit.data.mappers.toUiQuestion
 import com.egc.quizquit.domain.ITrivialRepository
 import com.egc.quizquit.domain.TrivialError
 import com.egc.quizquit.domain.TrivialResult
-import com.egc.quizquit.models.Trivial
+import com.egc.quizquit.data.models.UiQuestion
 import com.egc.quizquit.network.APITrivial
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
@@ -13,14 +14,15 @@ class TrivialRepository @Inject constructor(
     private val apiTrivial: APITrivial,
     private val tokenManager: TokenManager
 ): ITrivialRepository {
-    override suspend fun getQuestions(amount: Int): TrivialResult<List<Trivial.Result>> =
+    override suspend fun getQuestions(amount: Int): TrivialResult<List<UiQuestion>> =
         withValidToken { token ->
             runCatching {
                 val questions = apiTrivial.getQuestions(amount)
                 validateResponseCode(questions.responseCode, token)
                 when (val validation = validateResponseCode(questions.responseCode, token)) {
                     ValidationResult.Ok -> {
-                        TrivialResult.Success(questions.results)
+                        val decodedResults = questions.results.map { it.toUiQuestion() }
+                        TrivialResult.Success(decodedResults)
                     }
 
                     is ValidationResult.Recoverable -> {

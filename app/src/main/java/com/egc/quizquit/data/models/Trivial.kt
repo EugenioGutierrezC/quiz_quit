@@ -1,4 +1,4 @@
-package com.egc.quizquit.models
+package com.egc.quizquit.data.models
 
 import com.google.gson.annotations.SerializedName
 import androidx.annotation.Keep

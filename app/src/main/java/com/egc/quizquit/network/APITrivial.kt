@@ -1,7 +1,7 @@
 package com.egc.quizquit.network
 
-import com.egc.quizquit.models.CatchToken
-import com.egc.quizquit.models.Trivial
+import com.egc.quizquit.data.models.CatchToken
+import com.egc.quizquit.data.models.Trivial
 import retrofit2.http.GET
 import retrofit2.http.Query
 
